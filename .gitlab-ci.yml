@@ -1,0 +1,61 @@
+stages:
+  - build
+  - deploy
+  - build_dev
+  - deploy_dev
+  
+build_dev:
+  only: 
+    - dev
+  stage: build_dev
+  before_script:
+    - echo $CI_BUILD_TOKEN | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - docker rmi $(docker images -q registry.gitlab.com/shaldyrz/web-alpine-dev) || true
+    - cd /var/www/web-app-dev
+    - git reset --hard
+    - git pull origin dev
+    - docker build -f Dockerfile-alpine -t $CI_REGISTRY_IMAGE:dev .
+    - docker push $CI_REGISTRY_IMAGE:dev
+  tags:
+    - dev
+
+deploy_dev:
+  only: 
+    - dev
+  stage: deploy_dev
+  script:
+    # - docker stop web-app-dev
+    # - docker rm web-app-dev
+    # - docker container run --name web-app-dev -d -p 81:4000 web-alpine-dev:latest
+    - docker ps
+  tags:
+    - dev
+
+build_docker:
+  only: 
+    - master
+  stage: build
+  before_script:
+    - echo $CI_BUILD_TOKEN | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - docker rmi $(docker images -q registry.gitlab.com/shaldyrz/web-alpine-dev) || true
+    - cd /var/www/web-app
+    - git reset --hard
+    - git pull origin master
+    - docker build -f Dockerfile-alpine -t $CI_REGISTRY_IMAGE:prod .
+    - docker push $CI_REGISTRY_IMAGE:prod
+  tags:
+    - dev
+
+deploy_docker:
+  only: 
+    - master
+  stage: deploy
+  script:
+    # - docker stop web-app
+    # - docker rm web-app
+    # - docker container run --name web-app -d -p 80:4000 web-alpine:latest
+    - docker ps
+  tags:
+    - dev
